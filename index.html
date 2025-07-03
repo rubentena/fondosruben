@@ -321,16 +321,89 @@
             font-size: 1em;
         }
 
-        .checkbox-group {
+        .inflation-section {
+            grid-column: 1 / -1;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            background-color: var(--percentage-neutral-bg);
+        }
+
+        .inflation-header {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 0.5rem;
+        }
+
+        .inflation-scenarios {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .scenario-btn {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-bg-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .scenario-btn:hover {
+            background-color: var(--percentage-neutral-bg);
+            transform: translateY(-2px);
+        }
+
+        .scenario-btn.active {
+            background-color: var(--button-bg);
+            color: white;
+            border-color: var(--button-bg);
+        }
+
+        .scenario-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .scenario-rate {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: var(--color-active);
+        }
+
+        .scenario-btn.active .scenario-rate {
+            color: white;
+        }
+
+        .scenario-description {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .custom-inflation {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
             margin-top: 1rem;
         }
 
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+        .inflation-info {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-top: 0.75rem;
+            padding: 0.5rem;
+            background-color: var(--card-bg-color);
+            border-radius: 6px;
+            border-left: 3px solid var(--button-bg);
         }
 
         .calculate-btn {
@@ -623,6 +696,9 @@
             #pageTitle { font-size: 2em; }
             #instrumentsContainer { grid-template-columns: 1fr; }
             .chart-container { height: 300px; }
+            .inflation-scenarios {
+                grid-template-columns: 1fr;
+            }
         }
         @media (max-width: 480px) {
             body { padding: 1.5rem 0.5rem; }
@@ -732,11 +808,43 @@
                             <label for="annualReturn">Rentabilidad Anual (%):</label>
                             <input type="number" id="annualReturn" value="10.5" min="0" max="100" step="0.1">
                         </div>
-                    </div>
 
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="includeInflation">
-                        <label for="includeInflation">Incluir inflación española (2.5% anual)</label>
+                        <!-- Sección de Inflación Mejorada -->
+                        <div class="inflation-section">
+                            <div class="inflation-header">
+                                📊 Ajuste por Inflación Española
+                            </div>
+                            
+                            <div class="inflation-scenarios">
+                                <div class="scenario-btn" data-rate="1.5" onclick="selectInflationScenario(this, 1.5)">
+                                    <div class="scenario-title">🟢 Optimista</div>
+                                    <div class="scenario-rate">1.5%</div>
+                                    <div class="scenario-description">Meta BCE cumplida</div>
+                                </div>
+                                <div class="scenario-btn active" data-rate="2.3" onclick="selectInflationScenario(this, 2.3)">
+                                    <div class="scenario-title">🟡 Histórica</div>
+                                    <div class="scenario-rate">2.3%</div>
+                                    <div class="scenario-description">Media 2000-2023 (INE)</div>
+                                </div>
+                                <div class="scenario-btn" data-rate="3.5" onclick="selectInflationScenario(this, 3.5)">
+                                    <div class="scenario-title">🔴 Pesimista</div>
+                                    <div class="scenario-rate">3.5%</div>
+                                    <div class="scenario-description">Crisis energéticas</div>
+                                </div>
+                            </div>
+
+                            <div class="custom-inflation">
+                                <label for="customInflationRate">💡 Personalizada:</label>
+                                <input type="number" id="customInflationRate" value="2.3" min="0" max="20" step="0.1" onchange="updateCustomInflation()">
+                                <span>% anual</span>
+                            </div>
+
+                            <div class="inflation-info">
+                                <strong>📈 Datos INE/Eurostat:</strong> Media histórica española 2000-2023: 2.3%. 
+                                Últimos años: 2022 (8.4%), 2023 (3.5%), 2024 (~3.2%). 
+                                <strong>Meta BCE:</strong> ~2% a largo plazo.
+                            </div>
+                        </div>
                     </div>
 
                     <button class="calculate-btn" onclick="calculateInvestment()">🚀 Calcular Inversión</button>
@@ -763,6 +871,11 @@
                                 <div class="value" id="effectiveReturn">0%</div>
                                 <div class="label">Rentabilidad Efectiva</div>
                             </div>
+                            <div class="result-card">
+                                <div class="icon">🔥</div>
+                                <div class="value" id="realPurchasingPower">€0</div>
+                                <div class="label">Poder Adquisitivo Real</div>
+                            </div>
                         </div>
 
                         <div class="chart-container">
@@ -775,8 +888,8 @@
                                     <tr>
                                         <th>Año</th>
                                         <th>Inversión del Año</th>
-                                        <th>Valor Acumulado</th>
-                                        <th>Ganancia Anual</th>
+                                        <th>Valor Nominal</th>
+                                        <th>Valor Real (Sin Inflación)</th>
                                         <th>Ganancia Total</th>
                                     </tr>
                                 </thead>
@@ -852,6 +965,7 @@
         // --- Variables globales para la calculadora ---
         let investmentChart = null;
         let currentSP500Return = 10.5; // Valor por defecto
+        let currentInflationRate = 2.3; // Media histórica INE
 
         // --- Sistema de Favoritos ---
         let favoriteInstruments = JSON.parse(localStorage.getItem('favoriteInstruments')) || [];
@@ -909,6 +1023,26 @@
             }
         }
 
+        function selectInflationScenario(button, rate) {
+            // Remover clase active de todos los botones
+            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Añadir clase active al botón seleccionado
+            button.classList.add('active');
+            
+            // Actualizar el valor de inflación
+            currentInflationRate = rate;
+            document.getElementById('customInflationRate').value = rate;
+        }
+
+        function updateCustomInflation() {
+            const customRate = parseFloat(document.getElementById('customInflationRate').value);
+            currentInflationRate = customRate;
+            
+            // Remover active de todos los botones predefinidos
+            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+        }
+
         function calculateInvestment() {
             const startDate = new Date(document.getElementById('startDate').value);
             const endDate = new Date(document.getElementById('endDate').value);
@@ -916,8 +1050,7 @@
             const periodicInvestment = parseFloat(document.getElementById('periodicInvestment').value) || 0;
             const frequency = document.getElementById('frequency').value;
             const annualReturn = parseFloat(document.getElementById('annualReturn').value) / 100;
-            const includeInflation = document.getElementById('includeInflation').checked;
-            const inflationRate = 0.025; // 2.5% inflación española
+            const inflationRate = currentInflationRate / 100;
 
             if (startDate >= endDate) {
                 alert('La fecha de inicio debe ser anterior a la fecha objetivo');
@@ -945,6 +1078,7 @@
                 }
 
                 const periodYear = periodDate.getFullYear();
+                const yearsFromStart = (periodDate - startDate) / (365.25 * 24 * 60 * 60 * 1000);
                 
                 // Si cambiamos de año, guardamos el resultado del año anterior
                 if (periodYear !== currentYear) {
@@ -952,10 +1086,15 @@
                     const yearGain = yearEndValue - yearStartValue;
                     const totalGain = yearEndValue - totalInvested;
                     
+                    // Calcular valor real ajustado por inflación
+                    const inflationFactor = Math.pow(1 + inflationRate, yearsFromStart);
+                    const realValue = yearEndValue / inflationFactor;
+                    
                     results.push({
                         year: currentYear,
                         yearlyInvestment: yearlyInvestment,
                         totalValue: yearEndValue,
+                        realValue: realValue,
                         yearGain: yearGain,
                         totalGain: totalGain
                     });
@@ -979,38 +1118,32 @@
             }
 
             // Añadir el último año
+            const finalInflationFactor = Math.pow(1 + inflationRate, years);
+            const finalRealValue = totalValue / finalInflationFactor;
             const finalGain = totalValue - totalInvested;
+            
             results.push({
                 year: currentYear,
                 yearlyInvestment: yearlyInvestment,
                 totalValue: totalValue,
+                realValue: finalRealValue,
                 yearGain: totalValue - (results[results.length - 1]?.totalValue || yearStartValue),
                 totalGain: finalGain
             });
 
-            // Calcular valores ajustados por inflación si es necesario
-            let realFinalValue = totalValue;
-            let realTotalInvested = totalInvested;
-            
-            if (includeInflation) {
-                const inflationFactor = Math.pow(1 + inflationRate, years);
-                realFinalValue = totalValue / inflationFactor;
-                realTotalInvested = totalInvested / inflationFactor;
-            }
-
-            const netGain = realFinalValue - totalInvested;
-            const effectiveReturn = totalInvested > 0 ? ((realFinalValue / totalInvested) - 1) * 100 : 0;
+            const effectiveReturn = totalInvested > 0 ? ((totalValue / totalInvested) - 1) * 100 : 0;
 
             // Mostrar resultados
-            displayResults(realFinalValue, totalInvested, netGain, effectiveReturn, results, includeInflation);
+            displayResults(totalValue, totalInvested, finalGain, effectiveReturn, finalRealValue, results);
         }
 
-        function displayResults(finalValue, totalInvested, netGain, effectiveReturn, yearlyResults, includeInflation) {
+        function displayResults(finalValue, totalInvested, netGain, effectiveReturn, realValue, yearlyResults) {
             // Actualizar tarjetas de resumen
             document.getElementById('finalValue').textContent = formatCurrency(finalValue);
             document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
             document.getElementById('totalGains').textContent = formatCurrency(netGain);
             document.getElementById('effectiveReturn').textContent = formatPercentage(effectiveReturn);
+            document.getElementById('realPurchasingPower').textContent = formatCurrency(realValue);
 
             // Actualizar tabla
             const tableBody = document.getElementById('yearlyBreakdown');
@@ -1021,7 +1154,7 @@
                 row.insertCell(0).textContent = result.year;
                 row.insertCell(1).textContent = formatCurrency(result.yearlyInvestment);
                 row.insertCell(2).textContent = formatCurrency(result.totalValue);
-                row.insertCell(3).textContent = formatCurrency(result.yearGain);
+                row.insertCell(3).textContent = formatCurrency(result.realValue);
                 row.insertCell(4).textContent = formatCurrency(result.totalGain);
             });
 
@@ -1040,26 +1173,39 @@
             }
 
             const labels = data.map(d => d.year);
-            const investedData = data.map(d => d.yearlyInvestment);
-            const valueData = data.map(d => d.totalValue);
+            const nominalData = data.map(d => d.totalValue);
+            const realData = data.map(d => d.realValue);
+            let cumulativeInvested = 0;
+            const investedData = data.map(d => {
+                cumulativeInvested += d.yearlyInvestment;
+                return cumulativeInvested;
+            });
 
             investmentChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Valor Total de la Inversión',
-                        data: valueData,
+                        label: 'Valor Nominal',
+                        data: nominalData,
                         borderColor: 'rgb(52, 199, 89)',
                         backgroundColor: 'rgba(52, 199, 89, 0.1)',
-                        fill: true,
+                        fill: false,
                         tension: 0.4
                     }, {
-                        label: 'Inversión Acumulada',
-                        data: investedData.map((inv, i) => investedData.slice(0, i + 1).reduce((a, b) => a + b, 0)),
+                        label: 'Valor Real (sin inflación)',
+                        data: realData,
+                        borderColor: 'rgb(255, 149, 0)',
+                        backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                        fill: false,
+                        tension: 0.4,
+                        borderDash: [5, 5]
+                    }, {
+                        label: 'Total Invertido',
+                        data: investedData,
                         borderColor: 'rgb(0, 122, 255)',
                         backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        fill: true,
+                        fill: false,
                         tension: 0.4
                     }]
                 },
@@ -1069,7 +1215,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Evolución de la Inversión'
+                            text: `Evolución de la Inversión (Inflación: ${currentInflationRate}%)`
                         },
                         legend: {
                             display: true,
