@@ -22,6 +22,7 @@
             --color-negative: #ff3b30;
             --color-neutral: #007aff;
             --color-active: #5856d6;
+            --color-favorite: #ff9500;
 
             --percentage-positive-bg: rgba(52, 199, 89, 0.1);
             --percentage-negative-bg: rgba(255, 59, 48, 0.1);
@@ -40,6 +41,9 @@
             --button-lilac-hover-bg: #8e44ad;
             --button-yellow-bg: #f1c40f;
             --button-yellow-hover-bg: #f39c12;
+            
+            --favorite-border: rgba(255, 149, 0, 0.3);
+            --favorite-bg: rgba(255, 149, 0, 0.05);
         }
 
         body.dark-mode {
@@ -56,6 +60,7 @@
             --color-negative: #ff453a;
             --color-neutral: #0a84ff;
             --color-active: #5e5ce6;
+            --color-favorite: #ff9f0a;
 
             --percentage-positive-bg: rgba(50, 215, 75, 0.15);
             --percentage-negative-bg: rgba(255, 69, 58, 0.15);
@@ -68,6 +73,9 @@
             --button-bg: #0a84ff;
             --button-hover-bg: #0a78e0;
             --icon-fill: #f5f5f7;
+            
+            --favorite-border: rgba(255, 159, 10, 0.4);
+            --favorite-bg: rgba(255, 159, 10, 0.08);
         }
 
         /* --- Reseteo y Estilos Base --- */
@@ -199,7 +207,6 @@
             color: #1d1d1f;
         }
 
-
         #manualRefreshBtn svg { width: 1.2em; height: 1.2em; transition: transform 0.5s ease; }
         #manualRefreshBtn:active, #toggleReturnsBtn:active, #toggleHolidaysBtn:active { transform: scale(0.97); }
         #manualRefreshBtn.loading svg { transform: rotate(360deg); }
@@ -247,6 +254,29 @@
         .annual-return-value.positive { color: var(--color-positive); }
         .annual-return-value.negative { color: var(--color-negative); }
         .annual-return-value.neutral { color: var(--text-primary); }
+
+        /* --- Estilos para Secciones de Favoritos --- */
+        .section-header {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 2rem 0 1.5rem 0;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .section-header svg {
+            width: 1.2em;
+            height: 1.2em;
+            fill: var(--color-favorite);
+        }
+
+        .section-header.hidden {
+            display: none;
+        }
         
         #instrumentsContainer {
             display: grid;
@@ -269,24 +299,76 @@
             opacity: 0;
             transform: translateY(20px);
             animation: card-fade-in 0.5s ease forwards;
+            position: relative;
+            cursor: grab;
         }
+
+        .instrument-card.favorite {
+            border-color: var(--favorite-border);
+            background-color: var(--favorite-bg);
+            box-shadow: 0 8px 32px -8px var(--shadow-color), 0 0 0 2px var(--favorite-border);
+        }
+
+        .instrument-card.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+            cursor: grabbing;
+        }
+
+        .instrument-card.drag-over {
+            border-color: var(--color-favorite);
+            transform: scale(1.05);
+        }
+
         @keyframes card-fade-in {
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
+
         .instrument-card h2 { 
-            display: flex; align-items: center; justify-content: center;
-            flex-wrap: wrap; gap: 0.5rem; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            flex-wrap: wrap; 
+            gap: 0.5rem; 
             color: var(--text-primary); 
             margin: 0 0 1rem 0;
-            font-size: 1.2em; font-weight: 600;
+            font-size: 1.2em; 
+            font-weight: 600;
         }
+
+        .favorite-star {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            fill: var(--text-tertiary);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .favorite-star:hover {
+            fill: var(--color-favorite);
+            transform: scale(1.2);
+        }
+
+        .favorite-star.active {
+            fill: var(--color-favorite);
+        }
+
         .status-badge { 
-            display: inline-block; padding: 4px 10px; font-size: 0.65em; 
-            font-weight: 700; color: white; border-radius: 12px; 
-            text-transform: uppercase; letter-spacing: 0.5px;
+            display: inline-block; 
+            padding: 4px 10px; 
+            font-size: 0.65em; 
+            font-weight: 700; 
+            color: white; 
+            border-radius: 12px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
         }
         .status-badge.open { background-color: var(--color-positive); } 
         .status-badge.closed { background-color: var(--color-negative); }
@@ -313,14 +395,21 @@
         .percentage-display.error { color: var(--color-negative); font-size: 1.5rem; background-color: var(--percentage-negative-bg); }
 
         .status { 
-            font-size: 0.85em; color: var(--text-tertiary);
-            margin-top: 1rem; min-height: 1.2em;
+            font-size: 0.85em; 
+            color: var(--text-tertiary);
+            margin-top: 1rem; 
+            min-height: 1.2em;
         }
         .status.error { color: var(--color-negative); font-weight: 500; }
 
         #themeToggle {
-            position: absolute; top: 25px; right: 25px; cursor: pointer;
-            width: 28px; height: 28px; z-index: 100;
+            position: absolute; 
+            top: 25px; 
+            right: 25px; 
+            cursor: pointer;
+            width: 28px; 
+            height: 28px; 
+            z-index: 100;
         }
         #themeToggle svg { width: 100%; height: 100%; fill: var(--icon-fill); transition: fill 0.3s ease; }
         .sun-icon { display: none; }
@@ -423,7 +512,6 @@
                     <span class="annual-return-label">Rentabilidad Anual de Indexa Capital:</span>
                     <span id="indexaRatePercentage" class="annual-return-value"></span>
                 </div>
-                <!-- --- NUEVO BLOQUE HTML AÑADIDO --- -->
                 <div id="greaterChinaYtdContainer" class="annual-return-container">
                     <span class="annual-return-label">Rentabilidad Anual Greater China:</span>
                     <span id="greaterChinaYtdPercentage" class="annual-return-value"></span>
@@ -436,6 +524,18 @@
         </div>
 
         <div id="globalLoadingMessage" style="display: none;">Cargando cotizaciones, por favor espera...</div> 
+        
+        <!-- Sección de Favoritos -->
+        <h2 id="favoritesHeader" class="section-header hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg>
+            Mis Favoritos
+        </h2>
+        <main id="favoritesContainer"></main>
+
+        <!-- Sección de Otros Instrumentos -->
+        <h2 id="othersHeader" class="section-header">
+            📊 Otros Instrumentos
+        </h2>
         <main id="instrumentsContainer"></main>
     </div>
 
@@ -444,6 +544,9 @@
         const bodyElement = document.body;
         const themeToggle = document.getElementById('themeToggle');
         const instrumentsContainer = document.getElementById('instrumentsContainer');
+        const favoritesContainer = document.getElementById('favoritesContainer');
+        const favoritesHeader = document.getElementById('favoritesHeader');
+        const othersHeader = document.getElementById('othersHeader');
         const globalLoadingElement = document.getElementById('globalLoadingMessage');
         const sp500CommentaryElement = document.getElementById('sp500PageCommentary');
         const worldCommentaryElement = document.getElementById('worldPageCommentary');
@@ -471,16 +574,105 @@
         const moneyMarketRatePercentage = document.getElementById('moneyMarketRatePercentage');
         const indexaRateContainer = document.getElementById('indexaRateContainer');
         const indexaRatePercentage = document.getElementById('indexaRatePercentage');
-        // --- NUEVAS LÍNEAS AÑADIDAS ---
         const greaterChinaYtdContainer = document.getElementById('greaterChinaYtdContainer');
         const greaterChinaYtdPercentage = document.getElementById('greaterChinaYtdPercentage');
 
+        // --- Sistema de Favoritos ---
+        let favoriteInstruments = JSON.parse(localStorage.getItem('favoriteInstruments')) || [];
+        let favoriteOrder = JSON.parse(localStorage.getItem('favoriteOrder')) || [];
+
+        function saveFavoritesToStorage() {
+            localStorage.setItem('favoriteInstruments', JSON.stringify(favoriteInstruments));
+            localStorage.setItem('favoriteOrder', JSON.stringify(favoriteOrder));
+        }
+
+        function toggleFavorite(instrumentKey) {
+            const index = favoriteInstruments.indexOf(instrumentKey);
+            if (index === -1) {
+                favoriteInstruments.push(instrumentKey);
+                favoriteOrder.push(instrumentKey);
+            } else {
+                favoriteInstruments.splice(index, 1);
+                favoriteOrder.splice(favoriteOrder.indexOf(instrumentKey), 1);
+            }
+            saveFavoritesToStorage();
+            updateFavoriteDisplay();
+        }
+
+        function updateFavoriteDisplay() {
+            const hasFavorites = favoriteInstruments.length > 0;
+            favoritesHeader.classList.toggle('hidden', !hasFavorites);
+            othersHeader.style.display = hasFavorites ? 'flex' : 'none';
+            
+            if (hasFavorites) {
+                favoritesContainer.style.display = 'grid';
+                favoritesContainer.className = 'main-container';
+                favoritesContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
+                favoritesContainer.style.gap = '1.5rem';
+                favoritesContainer.style.marginBottom = '2rem';
+            } else {
+                favoritesContainer.style.display = 'none';
+            }
+        }
 
         // --- Iconos SVG ---
         const ICONS = {
             up: `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L5.28 9.68a.75.75 0 01-1.06-1.06l5.25-5.25a.75.75 0 011.06 0l5.25 5.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd" /></svg>`,
-            down: `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.97-4.07a.75.75 0 111.06 1.06l-5.25 5.25a.75.75 0 01-1.06 0l-5.25-5.25a.75.75 0 111.06-1.06l3.97 4.07V3.75A.75.75 0 0110 3z" clip-rule="evenodd" /></svg>`
+            down: `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.97-4.07a.75.75 0 111.06 1.06l-5.25 5.25a.75.75 0 01-1.06 0l-5.25-5.25a.75.75 0 111.06-1.06l3.97 4.07V3.75A.75.75 0 0110 3z" clip-rule="evenodd" /></svg>`,
+            star: `<svg class="favorite-star" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg>`,
+            starFilled: `<svg class="favorite-star active" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/></svg>`
         };
+
+        // --- Drag & Drop para Favoritos ---
+        let draggedElement = null;
+
+        function makeDraggable(element, instrumentKey) {
+            element.draggable = true;
+            
+            element.addEventListener('dragstart', (e) => {
+                if (!favoriteInstruments.includes(instrumentKey)) return;
+                draggedElement = element;
+                element.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', element.outerHTML);
+            });
+
+            element.addEventListener('dragend', () => {
+                element.classList.remove('dragging');
+                draggedElement = null;
+            });
+
+            element.addEventListener('dragover', (e) => {
+                if (!favoriteInstruments.includes(instrumentKey) || !draggedElement) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                element.classList.add('drag-over');
+            });
+
+            element.addEventListener('dragleave', () => {
+                element.classList.remove('drag-over');
+            });
+
+            element.addEventListener('drop', (e) => {
+                if (!favoriteInstruments.includes(instrumentKey) || !draggedElement) return;
+                e.preventDefault();
+                element.classList.remove('drag-over');
+                
+                const draggedKey = draggedElement.id.replace('card_', '');
+                const targetKey = instrumentKey;
+                
+                if (draggedKey !== targetKey) {
+                    const draggedIndex = favoriteOrder.indexOf(draggedKey);
+                    const targetIndex = favoriteOrder.indexOf(targetKey);
+                    
+                    favoriteOrder.splice(draggedIndex, 1);
+                    favoriteOrder.splice(targetIndex, 0, draggedKey);
+                    
+                    saveFavoritesToStorage();
+                    renderInstruments();
+                }
+            });
+        }
 
         // --- Gestión del Tema ---
         function applyTheme(theme) {
@@ -497,13 +689,16 @@
         applyTheme(localStorage.getItem('theme') || 'light');
 
         // --- Funciones de Renderizado y Actualización ---
-        function createInstrumentCard(instrumentKey, data, index) {
+        function createInstrumentCard(instrumentKey, data, index, isFavorite = false) {
             const card = document.createElement('div');
-            card.className = 'instrument-card';
+            card.className = `instrument-card ${isFavorite ? 'favorite' : ''}`;
             card.id = `card_${instrumentKey}`;
             card.style.animationDelay = `${index * 100}ms`;
             
+            const starIcon = favoriteInstruments.includes(instrumentKey) ? ICONS.starFilled : ICONS.star;
+            
             card.innerHTML = `
+                ${starIcon}
                 <h2>
                     <span>${data.display_name}</span>
                     <span id="statusBadge_${instrumentKey}" class="status-badge"></span>
@@ -512,7 +707,61 @@
                 <div id="statusMessage_${instrumentKey}" class="status"></div>
             `;
 
-            instrumentsContainer.appendChild(card);
+            const starElement = card.querySelector('.favorite-star');
+            starElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFavorite(instrumentKey);
+            });
+
+            makeDraggable(card, instrumentKey);
+
+            return card;
+        }
+
+        function renderInstruments() {
+            const containers = [favoritesContainer, instrumentsContainer];
+            containers.forEach(container => {
+                container.innerHTML = '';
+            });
+
+            if (window.currentInstrumentsData) {
+                const data = window.currentInstrumentsData;
+                
+                // Renderizar favoritos en orden personalizado
+                favoriteOrder.forEach((key, index) => {
+                    if (data[key] && favoriteInstruments.includes(key)) {
+                        const card = createInstrumentCard(key, data[key], index, true);
+                        favoritesContainer.appendChild(card);
+                        updateInstrumentCard(key, data[key]);
+                    }
+                });
+
+                // Renderizar otros instrumentos
+                const instrumentOrder = ["sp500_net_eur", "world_net_eur", "sp500_futures", "usd_eur", "sp500_usd"];
+                const instrumentsToRender = { ...data };
+                let nonFavoriteIndex = 0;
+
+                // Primero los instrumentos en orden específico
+                instrumentOrder.forEach(key => {
+                    if (instrumentsToRender[key] && !favoriteInstruments.includes(key)) {
+                        const card = createInstrumentCard(key, instrumentsToRender[key], nonFavoriteIndex++, false);
+                        instrumentsContainer.appendChild(card);
+                        updateInstrumentCard(key, instrumentsToRender[key]);
+                        delete instrumentsToRender[key];
+                    }
+                });
+
+                // Después el resto
+                for (const key in instrumentsToRender) {
+                    if (!favoriteInstruments.includes(key)) {
+                        const card = createInstrumentCard(key, instrumentsToRender[key], nonFavoriteIndex++, false);
+                        instrumentsContainer.appendChild(card);
+                        updateInstrumentCard(key, instrumentsToRender[key]);
+                    }
+                }
+
+                updateFavoriteDisplay();
+            }
         }
 
         function updatePageCommentary(element, insight) {
@@ -611,7 +860,8 @@
 
             if (isFirstLoad && globalLoadingElement) {
                 globalLoadingElement.style.display = 'block';
-                instrumentsContainer.style.display = 'none'; 
+                instrumentsContainer.style.display = 'none';
+                favoritesContainer.style.display = 'none';
             }
             
             try {
@@ -640,41 +890,23 @@
                 updateAnnualReturnDisplay(usdeurYtdContainer, usdeurYtdPercentage, allData.page_data?.usdeur_ytd);
                 updateAnnualReturnDisplay(moneyMarketRateContainer, moneyMarketRatePercentage, allData.page_data?.money_market_rate);
                 updateAnnualReturnDisplay(indexaRateContainer, indexaRatePercentage, allData.page_data?.indexa_rate);
-                // --- NUEVA LÍNEA AÑADIDA ---
                 updateAnnualReturnDisplay(greaterChinaYtdContainer, greaterChinaYtdPercentage, allData.page_data?.greater_china_ytd);
 
                 if (allData.instruments) {
-                    const instrumentOrder = ["sp500_net_eur", "world_net_eur", "sp500_futures", "usd_eur", "sp500_usd"];
-                    const instrumentsToRender = { ...allData.instruments };
-                    let index = 0;
-
-                    instrumentOrder.forEach(key => {
-                        if (instrumentsToRender[key]) {
-                            const data = instrumentsToRender[key];
-                            if (!document.getElementById(`card_${key}`)) {
-                                createInstrumentCard(key, data, index++);
-                            }
-                            updateInstrumentCard(key, data);
-                            delete instrumentsToRender[key];
-                        }
-                    });
-
-                    for (const key in instrumentsToRender) {
-                        const data = instrumentsToRender[key];
-                        if (!document.getElementById(`card_${key}`)) {
-                            createInstrumentCard(key, data, index++);
-                        }
-                        updateInstrumentCard(key, data);
-                    }
+                    window.currentInstrumentsData = allData.instruments;
+                    renderInstruments();
                 }
                 
             } catch (error) {
                 console.error('Error al obtener todos los datos:', error);
-                if (isFirstLoad) instrumentsContainer.innerHTML = `<p class="status error" style="text-align:center; width:100%;">${error.message}</p>`;
+                if (isFirstLoad) {
+                    instrumentsContainer.innerHTML = `<p class="status error" style="text-align:center; width:100%;">${error.message}</p>`;
+                }
             } finally {
                 if (isFirstLoad) {
                     if (globalLoadingElement) globalLoadingElement.style.display = 'none';
-                    if (instrumentsContainer) instrumentsContainer.style.display = 'grid';
+                    instrumentsContainer.style.display = 'grid';
+                    updateFavoriteDisplay();
                     isFirstLoad = false;
                 }
                 if (manualRefreshBtn) {
@@ -687,6 +919,7 @@
 
         // --- Event Listeners e Intervalos ---
         document.addEventListener('DOMContentLoaded', () => {
+            updateFavoriteDisplay();
             fetchAndUpdateAllData();
             setInterval(fetchAndUpdateAllData, 300000); 
         });
