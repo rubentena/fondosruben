@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seguimiento de fondos, por Rubén Tena</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             /* Paleta de Colores General */
@@ -41,6 +42,8 @@
             --button-lilac-hover-bg: #8e44ad;
             --button-yellow-bg: #f1c40f;
             --button-yellow-hover-bg: #f39c12;
+            --button-green-bg: #27ae60;
+            --button-green-hover-bg: #229954;
             
             --favorite-border: rgba(255, 149, 0, 0.3);
             --favorite-bg: rgba(255, 149, 0, 0.05);
@@ -165,7 +168,7 @@
             text-align: center;
         }
         
-        #manualRefreshBtn, #toggleReturnsBtn, #toggleHolidaysBtn
+        #manualRefreshBtn, #toggleReturnsBtn, #toggleHolidaysBtn, #toggleCalculatorBtn
         {
             font-family: var(--font-sans);
             font-size: 1em;
@@ -203,12 +206,21 @@
         #toggleHolidaysBtn:hover {
             background-color: var(--button-yellow-hover-bg);
         }
+
+        #toggleCalculatorBtn {
+            margin-top: 0.75rem;
+            background-color: var(--button-green-bg);
+        }
+        #toggleCalculatorBtn:hover {
+            background-color: var(--button-green-hover-bg);
+        }
+
         body.dark-mode #toggleHolidaysBtn {
             color: #1d1d1f;
         }
 
         #manualRefreshBtn svg { width: 1.2em; height: 1.2em; transition: transform 0.5s ease; }
-        #manualRefreshBtn:active, #toggleReturnsBtn:active, #toggleHolidaysBtn:active { transform: scale(0.97); }
+        #manualRefreshBtn:active, #toggleReturnsBtn:active, #toggleHolidaysBtn:active, #toggleCalculatorBtn:active { transform: scale(0.97); }
         #manualRefreshBtn.loading svg { transform: rotate(360deg); }
         #manualRefreshBtn:disabled { background-color: #8e8e93; cursor: not-allowed; opacity: 0.7; }
 
@@ -254,6 +266,166 @@
         .annual-return-value.positive { color: var(--color-positive); }
         .annual-return-value.negative { color: var(--color-negative); }
         .annual-return-value.neutral { color: var(--text-primary); }
+
+        /* --- Calculadora de Inversión --- */
+        #calculatorWrapper {
+            display: none;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        #calculatorWrapper.is-visible {
+            display: block;
+        }
+
+        .calculator-container {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .calculator-header {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .calculator-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .input-group input, .input-group select {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-bg-color);
+            color: var(--text-primary);
+            font-size: 1em;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .calculate-btn {
+            background-color: var(--button-green-bg);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 1rem 2rem;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin: 1rem auto;
+            display: block;
+        }
+
+        .calculate-btn:hover {
+            background-color: var(--button-green-hover-bg);
+        }
+
+        .results-section {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .results-section.visible {
+            display: block;
+        }
+
+        .results-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .result-card {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .result-card .icon {
+            font-size: 2em;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-card .value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--color-positive);
+        }
+
+        .result-card .label {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            margin-top: 0.25rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg-color);
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 0.75rem;
+            text-align: right;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .results-table th {
+            background-color: var(--percentage-neutral-bg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .results-table tr:hover {
+            background-color: var(--percentage-neutral-bg);
+        }
 
         /* --- Estilos para Secciones de Favoritos --- */
         .section-header {
@@ -439,16 +611,24 @@
                 flex-direction: column;
                 align-items: stretch;
             }
+            .calculator-inputs {
+                grid-template-columns: 1fr;
+            }
+            .results-summary {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
         }
         @media (max-width: 768px) {
             body { padding: 2rem 1rem; }
             #pageTitle { font-size: 2em; }
             #instrumentsContainer { grid-template-columns: 1fr; }
+            .chart-container { height: 300px; }
         }
         @media (max-width: 480px) {
             body { padding: 1.5rem 0.5rem; }
             #pageTitle { font-size: 1.6em; }
             .percentage-display { font-size: 2.5em; }
+            .results-summary { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -477,6 +657,7 @@
                 <p id="dataFreshnessTimestamp" class="data-freshness-timestamp"></p>
                 <button id="toggleReturnsBtn">Haz clic para ver las rentabilidades</button>
                 <button id="toggleHolidaysBtn">Calendario de Festivos USA</button>
+                <button id="toggleCalculatorBtn">📊 Calculadora de Inversión</button>
             </div>
             
             <div id="annualReturnsWrapper">
@@ -515,6 +696,95 @@
                 <div id="greaterChinaYtdContainer" class="annual-return-container">
                     <span class="annual-return-label">Rentabilidad Anual Greater China:</span>
                     <span id="greaterChinaYtdPercentage" class="annual-return-value"></span>
+                </div>
+            </div>
+
+            <!-- Calculadora de Inversión -->
+            <div id="calculatorWrapper">
+                <div class="calculator-container">
+                    <h3 class="calculator-header">🧮 Calculadora de Inversión S&P 500</h3>
+                    
+                    <div class="calculator-inputs">
+                        <div class="input-group">
+                            <label for="startDate">Fecha de Inicio:</label>
+                            <input type="date" id="startDate" value="2015-01-01">
+                        </div>
+                        <div class="input-group">
+                            <label for="endDate">Fecha Objetivo:</label>
+                            <input type="date" id="endDate">
+                        </div>
+                        <div class="input-group">
+                            <label for="initialInvestment">Inversión Inicial (€):</label>
+                            <input type="number" id="initialInvestment" value="10000" min="0" step="100">
+                        </div>
+                        <div class="input-group">
+                            <label for="periodicInvestment">Inversión Periódica (€):</label>
+                            <input type="number" id="periodicInvestment" value="500" min="0" step="50">
+                        </div>
+                        <div class="input-group">
+                            <label for="frequency">Frecuencia:</label>
+                            <select id="frequency">
+                                <option value="monthly">Mensual</option>
+                                <option value="annual">Anual</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="annualReturn">Rentabilidad Anual (%):</label>
+                            <input type="number" id="annualReturn" value="10.5" min="0" max="100" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="includeInflation">
+                        <label for="includeInflation">Incluir inflación española (2.5% anual)</label>
+                    </div>
+
+                    <button class="calculate-btn" onclick="calculateInvestment()">🚀 Calcular Inversión</button>
+
+                    <div id="calculatorResults" class="results-section">
+                        <div class="results-summary">
+                            <div class="result-card">
+                                <div class="icon">💰</div>
+                                <div class="value" id="finalValue">€0</div>
+                                <div class="label">Valor Final</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="icon">📊</div>
+                                <div class="value" id="totalInvested">€0</div>
+                                <div class="label">Total Invertido</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="icon">📈</div>
+                                <div class="value" id="totalGains">€0</div>
+                                <div class="label">Ganancia Neta</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="icon">🎯</div>
+                                <div class="value" id="effectiveReturn">0%</div>
+                                <div class="label">Rentabilidad Efectiva</div>
+                            </div>
+                        </div>
+
+                        <div class="chart-container">
+                            <canvas id="investmentChart"></canvas>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="results-table">
+                                <thead>
+                                    <tr>
+                                        <th>Año</th>
+                                        <th>Inversión del Año</th>
+                                        <th>Valor Acumulado</th>
+                                        <th>Ganancia Anual</th>
+                                        <th>Ganancia Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="yearlyBreakdown">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -556,6 +826,8 @@
         const toggleReturnsBtn = document.getElementById('toggleReturnsBtn');
         const annualReturnsWrapper = document.getElementById('annualReturnsWrapper');
         const toggleHolidaysBtn = document.getElementById('toggleHolidaysBtn');
+        const toggleCalculatorBtn = document.getElementById('toggleCalculatorBtn');
+        const calculatorWrapper = document.getElementById('calculatorWrapper');
         const holidaysContainer = document.getElementById('holidaysContainer');
         const bogleQuoteElement = document.getElementById('bogleQuote');
         const sp500YtdContainer = document.getElementById('sp500YtdContainer');
@@ -576,6 +848,10 @@
         const indexaRatePercentage = document.getElementById('indexaRatePercentage');
         const greaterChinaYtdContainer = document.getElementById('greaterChinaYtdContainer');
         const greaterChinaYtdPercentage = document.getElementById('greaterChinaYtdPercentage');
+
+        // --- Variables globales para la calculadora ---
+        let investmentChart = null;
+        let currentSP500Return = 10.5; // Valor por defecto
 
         // --- Sistema de Favoritos ---
         let favoriteInstruments = JSON.parse(localStorage.getItem('favoriteInstruments')) || [];
@@ -613,6 +889,222 @@
             } else {
                 favoritesContainer.style.display = 'none';
             }
+        }
+
+        // --- Funciones de la Calculadora ---
+        function initializeCalculator() {
+            const today = new Date();
+            const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate());
+            
+            document.getElementById('startDate').value = tenYearsAgo.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            
+            // Actualizar la rentabilidad cuando tengamos los datos
+            updateCalculatorDefaults();
+        }
+
+        function updateCalculatorDefaults() {
+            if (currentSP500Return) {
+                document.getElementById('annualReturn').value = currentSP500Return;
+            }
+        }
+
+        function calculateInvestment() {
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+            const initialInvestment = parseFloat(document.getElementById('initialInvestment').value) || 0;
+            const periodicInvestment = parseFloat(document.getElementById('periodicInvestment').value) || 0;
+            const frequency = document.getElementById('frequency').value;
+            const annualReturn = parseFloat(document.getElementById('annualReturn').value) / 100;
+            const includeInflation = document.getElementById('includeInflation').checked;
+            const inflationRate = 0.025; // 2.5% inflación española
+
+            if (startDate >= endDate) {
+                alert('La fecha de inicio debe ser anterior a la fecha objetivo');
+                return;
+            }
+
+            const years = (endDate - startDate) / (365.25 * 24 * 60 * 60 * 1000);
+            const monthlyReturn = Math.pow(1 + annualReturn, 1/12) - 1;
+            const periodsPerYear = frequency === 'monthly' ? 12 : 1;
+            const totalPeriods = Math.floor(years * periodsPerYear);
+
+            let results = [];
+            let totalValue = initialInvestment;
+            let totalInvested = initialInvestment;
+            let currentYear = startDate.getFullYear();
+            let yearlyInvestment = 0;
+            let yearStartValue = initialInvestment;
+
+            for (let period = 0; period < totalPeriods; period++) {
+                const periodDate = new Date(startDate);
+                if (frequency === 'monthly') {
+                    periodDate.setMonth(startDate.getMonth() + period + 1);
+                } else {
+                    periodDate.setFullYear(startDate.getFullYear() + period + 1);
+                }
+
+                const periodYear = periodDate.getFullYear();
+                
+                // Si cambiamos de año, guardamos el resultado del año anterior
+                if (periodYear !== currentYear) {
+                    const yearEndValue = totalValue;
+                    const yearGain = yearEndValue - yearStartValue;
+                    const totalGain = yearEndValue - totalInvested;
+                    
+                    results.push({
+                        year: currentYear,
+                        yearlyInvestment: yearlyInvestment,
+                        totalValue: yearEndValue,
+                        yearGain: yearGain,
+                        totalGain: totalGain
+                    });
+                    
+                    currentYear = periodYear;
+                    yearStartValue = yearEndValue;
+                    yearlyInvestment = 0;
+                }
+
+                // Aplicar rendimiento
+                if (frequency === 'monthly') {
+                    totalValue *= (1 + monthlyReturn);
+                } else {
+                    totalValue *= (1 + annualReturn);
+                }
+
+                // Añadir inversión periódica
+                totalValue += periodicInvestment;
+                totalInvested += periodicInvestment;
+                yearlyInvestment += periodicInvestment;
+            }
+
+            // Añadir el último año
+            const finalGain = totalValue - totalInvested;
+            results.push({
+                year: currentYear,
+                yearlyInvestment: yearlyInvestment,
+                totalValue: totalValue,
+                yearGain: totalValue - (results[results.length - 1]?.totalValue || yearStartValue),
+                totalGain: finalGain
+            });
+
+            // Calcular valores ajustados por inflación si es necesario
+            let realFinalValue = totalValue;
+            let realTotalInvested = totalInvested;
+            
+            if (includeInflation) {
+                const inflationFactor = Math.pow(1 + inflationRate, years);
+                realFinalValue = totalValue / inflationFactor;
+                realTotalInvested = totalInvested / inflationFactor;
+            }
+
+            const netGain = realFinalValue - totalInvested;
+            const effectiveReturn = totalInvested > 0 ? ((realFinalValue / totalInvested) - 1) * 100 : 0;
+
+            // Mostrar resultados
+            displayResults(realFinalValue, totalInvested, netGain, effectiveReturn, results, includeInflation);
+        }
+
+        function displayResults(finalValue, totalInvested, netGain, effectiveReturn, yearlyResults, includeInflation) {
+            // Actualizar tarjetas de resumen
+            document.getElementById('finalValue').textContent = formatCurrency(finalValue);
+            document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
+            document.getElementById('totalGains').textContent = formatCurrency(netGain);
+            document.getElementById('effectiveReturn').textContent = formatPercentage(effectiveReturn);
+
+            // Actualizar tabla
+            const tableBody = document.getElementById('yearlyBreakdown');
+            tableBody.innerHTML = '';
+            
+            yearlyResults.forEach(result => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = result.year;
+                row.insertCell(1).textContent = formatCurrency(result.yearlyInvestment);
+                row.insertCell(2).textContent = formatCurrency(result.totalValue);
+                row.insertCell(3).textContent = formatCurrency(result.yearGain);
+                row.insertCell(4).textContent = formatCurrency(result.totalGain);
+            });
+
+            // Actualizar gráfico
+            updateInvestmentChart(yearlyResults);
+
+            // Mostrar sección de resultados
+            document.getElementById('calculatorResults').classList.add('visible');
+        }
+
+        function updateInvestmentChart(data) {
+            const ctx = document.getElementById('investmentChart').getContext('2d');
+            
+            if (investmentChart) {
+                investmentChart.destroy();
+            }
+
+            const labels = data.map(d => d.year);
+            const investedData = data.map(d => d.yearlyInvestment);
+            const valueData = data.map(d => d.totalValue);
+
+            investmentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Valor Total de la Inversión',
+                        data: valueData,
+                        borderColor: 'rgb(52, 199, 89)',
+                        backgroundColor: 'rgba(52, 199, 89, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Inversión Acumulada',
+                        data: investedData.map((inv, i) => investedData.slice(0, i + 1).reduce((a, b) => a + b, 0)),
+                        borderColor: 'rgb(0, 122, 255)',
+                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Evolución de la Inversión'
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        function formatPercentage(value) {
+            return new Intl.NumberFormat('es-ES', {
+                style: 'percent',
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1
+            }).format(value / 100);
         }
 
         // --- Iconos SVG ---
@@ -789,6 +1281,12 @@
                 if (perfValue > 0) valueElem.classList.add('positive');
                 else if (perfValue < 0) valueElem.classList.add('negative');
                 else valueElem.classList.add('neutral');
+
+                // Actualizar rentabilidad por defecto de la calculadora
+                if (containerElem.id === 'sp500_10y_annualized_Container' && !isNaN(perfValue)) {
+                    currentSP500Return = perfValue;
+                    updateCalculatorDefaults();
+                }
             } else if (data.error) {
                 containerElem.style.display = 'block';
                 valueElem.textContent = `Error: ${data.error}`;
@@ -920,6 +1418,7 @@
         // --- Event Listeners e Intervalos ---
         document.addEventListener('DOMContentLoaded', () => {
             updateFavoriteDisplay();
+            initializeCalculator();
             fetchAndUpdateAllData();
             setInterval(fetchAndUpdateAllData, 300000); 
         });
@@ -939,6 +1438,14 @@
         if (toggleHolidaysBtn) {
             toggleHolidaysBtn.addEventListener('click', () => {
                 holidaysContainer.classList.toggle('is-visible');
+            });
+        }
+
+        if (toggleCalculatorBtn) {
+            toggleCalculatorBtn.addEventListener('click', () => {
+                calculatorWrapper.classList.toggle('is-visible');
+                const isVisible = calculatorWrapper.classList.contains('is-visible');
+                toggleCalculatorBtn.textContent = isVisible ? '❌ Cerrar Calculadora' : '📊 Calculadora de Inversión';
             });
         }
     </script>
