@@ -321,15 +321,16 @@
             font-size: 1em;
         }
 
-        .inflation-section {
+        .inflation-section, .tax-section {
             grid-column: 1 / -1;
             border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 1rem;
             background-color: var(--percentage-neutral-bg);
+            margin-top: 1rem;
         }
 
-        .inflation-header {
+        .inflation-header, .tax-header {
             font-weight: 600;
             margin-bottom: 1rem;
             color: var(--text-primary);
@@ -338,14 +339,14 @@
             gap: 0.5rem;
         }
 
-        .inflation-scenarios {
+        .inflation-scenarios, .tax-scenarios {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 0.75rem;
             margin-bottom: 1rem;
         }
 
-        .scenario-btn {
+        .scenario-btn, .tax-btn {
             padding: 0.75rem;
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -357,46 +358,46 @@
             font-size: 0.9em;
         }
 
-        .scenario-btn:hover {
+        .scenario-btn:hover, .tax-btn:hover {
             background-color: var(--percentage-neutral-bg);
             transform: translateY(-2px);
         }
 
-        .scenario-btn.active {
+        .scenario-btn.active, .tax-btn.active {
             background-color: var(--button-bg);
             color: white;
             border-color: var(--button-bg);
         }
 
-        .scenario-title {
+        .scenario-title, .tax-title {
             font-weight: 600;
             margin-bottom: 0.25rem;
         }
 
-        .scenario-rate {
+        .scenario-rate, .tax-rate {
             font-size: 1.1em;
             font-weight: 700;
             color: var(--color-active);
         }
 
-        .scenario-btn.active .scenario-rate {
+        .scenario-btn.active .scenario-rate, .tax-btn.active .tax-rate {
             color: white;
         }
 
-        .scenario-description {
+        .scenario-description, .tax-description {
             font-size: 0.8em;
             color: var(--text-secondary);
             margin-top: 0.25rem;
         }
 
-        .custom-inflation {
+        .custom-inflation, .custom-tax {
             display: flex;
             align-items: center;
             gap: 1rem;
             margin-top: 1rem;
         }
 
-        .inflation-info {
+        .inflation-info, .tax-info {
             font-size: 0.85em;
             color: var(--text-secondary);
             margin-top: 0.75rem;
@@ -435,7 +436,7 @@
 
         .results-summary {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
@@ -696,7 +697,7 @@
             #pageTitle { font-size: 2em; }
             #instrumentsContainer { grid-template-columns: 1fr; }
             .chart-container { height: 300px; }
-            .inflation-scenarios {
+            .inflation-scenarios, .tax-scenarios {
                 grid-template-columns: 1fr;
             }
         }
@@ -809,7 +810,7 @@
                             <input type="number" id="annualReturn" value="10.5" min="0" max="100" step="0.1">
                         </div>
 
-                        <!-- Sección de Inflación Mejorada -->
+                        <!-- Sección de Inflación -->
                         <div class="inflation-section">
                             <div class="inflation-header">
                                 📊 Ajuste por Inflación Española
@@ -845,6 +846,43 @@
                                 <strong>Meta BCE:</strong> ~2% a largo plazo.
                             </div>
                         </div>
+
+                        <!-- Sección de Impuestos -->
+                        <div class="tax-section">
+                            <div class="tax-header">
+                                🏛️ Impuestos IRPF (Hacienda Española)
+                            </div>
+                            
+                            <div class="tax-scenarios">
+                                <div class="tax-btn active" data-rate="20" onclick="selectTaxScenario(this, 20, 'simple')">
+                                    <div class="tax-title">📊 Aproximado</div>
+                                    <div class="tax-rate">20%</div>
+                                    <div class="tax-description">Estimación general</div>
+                                </div>
+                                <div class="tax-btn" data-rate="tramos" onclick="selectTaxScenario(this, 'tramos', 'real')">
+                                    <div class="tax-title">⚖️ Tramos Reales</div>
+                                    <div class="tax-rate">19-23%</div>
+                                    <div class="tax-description">Según IRPF 2024</div>
+                                </div>
+                                <div class="tax-btn" data-rate="0" onclick="selectTaxScenario(this, 0, 'none')">
+                                    <div class="tax-title">🚫 Sin Impuestos</div>
+                                    <div class="tax-rate">0%</div>
+                                    <div class="tax-description">No incluir</div>
+                                </div>
+                            </div>
+
+                            <div class="custom-tax" style="display: none;">
+                                <label for="customTaxRate">💡 Personalizado:</label>
+                                <input type="number" id="customTaxRate" value="20" min="0" max="50" step="0.1" onchange="updateCustomTax()">
+                                <span>% de la ganancia</span>
+                            </div>
+
+                            <div class="tax-info">
+                                <strong>⚖️ IRPF 2024:</strong> Hasta 6.000€ (19%), 6.001€-50.000€ (21%), +50.000€ (23%).
+                                <strong>💡 Importante:</strong> Solo se pagan al vender/retirar la inversión.
+                                Los fondos de acumulación no tributan hasta la venta.
+                            </div>
+                        </div>
                     </div>
 
                     <button class="calculate-btn" onclick="calculateInvestment()">🚀 Calcular Inversión</button>
@@ -864,12 +902,17 @@
                             <div class="result-card">
                                 <div class="icon">📈</div>
                                 <div class="value" id="totalGains">€0</div>
-                                <div class="label">Ganancia Neta</div>
+                                <div class="label">Ganancia Bruta</div>
                             </div>
                             <div class="result-card">
-                                <div class="icon">🎯</div>
-                                <div class="value" id="effectiveReturn">0%</div>
-                                <div class="label">Rentabilidad Efectiva</div>
+                                <div class="icon">🏛️</div>
+                                <div class="value" id="totalTaxes">€0</div>
+                                <div class="label">Impuestos IRPF</div>
+                            </div>
+                            <div class="result-card">
+                                <div class="icon">💎</div>
+                                <div class="value" id="netGains">€0</div>
+                                <div class="label">Ganancia Neta</div>
                             </div>
                             <div class="result-card">
                                 <div class="icon">🔥</div>
@@ -888,9 +931,10 @@
                                     <tr>
                                         <th>Año</th>
                                         <th>Inversión del Año</th>
-                                        <th>Valor Nominal</th>
-                                        <th>Valor Real (Sin Inflación)</th>
-                                        <th>Ganancia Total</th>
+                                        <th>Valor Bruto</th>
+                                        <th>Impuestos IRPF</th>
+                                        <th>Valor Neto</th>
+                                        <th>Valor Real</th>
                                     </tr>
                                 </thead>
                                 <tbody id="yearlyBreakdown">
@@ -966,6 +1010,8 @@
         let investmentChart = null;
         let currentSP500Return = 10.5; // Valor por defecto
         let currentInflationRate = 2.3; // Media histórica INE
+        let currentTaxRate = 20; // Aproximación por defecto
+        let taxMode = 'simple'; // 'simple', 'real', 'none'
 
         // --- Sistema de Favoritos ---
         let favoriteInstruments = JSON.parse(localStorage.getItem('favoriteInstruments')) || [];
@@ -1043,6 +1089,63 @@
             document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
         }
 
+        function selectTaxScenario(button, rate, mode) {
+            // Remover clase active de todos los botones
+            document.querySelectorAll('.tax-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Añadir clase active al botón seleccionado
+            button.classList.add('active');
+            
+            // Actualizar configuración de impuestos
+            taxMode = mode;
+            if (mode === 'simple') {
+                currentTaxRate = rate;
+                document.getElementById('customTaxRate').value = rate;
+            } else if (mode === 'none') {
+                currentTaxRate = 0;
+            }
+            
+            // Mostrar/ocultar input personalizado
+            const customTaxDiv = document.querySelector('.custom-tax');
+            customTaxDiv.style.display = mode === 'simple' ? 'flex' : 'none';
+        }
+
+        function updateCustomTax() {
+            const customRate = parseFloat(document.getElementById('customTaxRate').value);
+            currentTaxRate = customRate;
+            taxMode = 'simple';
+            
+            // Remover active de todos los botones predefinidos
+            document.querySelectorAll('.tax-btn').forEach(btn => btn.classList.remove('active'));
+        }
+
+        function calculateSpanishTax(capitalGain) {
+            if (taxMode === 'none' || capitalGain <= 0) {
+                return 0;
+            }
+            
+            if (taxMode === 'simple') {
+                return capitalGain * (currentTaxRate / 100);
+            }
+            
+            if (taxMode === 'real') {
+                // Tramos reales IRPF 2024
+                let tax = 0;
+                
+                if (capitalGain <= 6000) {
+                    tax = capitalGain * 0.19;
+                } else if (capitalGain <= 50000) {
+                    tax = 6000 * 0.19 + (capitalGain - 6000) * 0.21;
+                } else {
+                    tax = 6000 * 0.19 + 44000 * 0.21 + (capitalGain - 50000) * 0.23;
+                }
+                
+                return tax;
+            }
+            
+            return 0;
+        }
+
         function calculateInvestment() {
             const startDate = new Date(document.getElementById('startDate').value);
             const endDate = new Date(document.getElementById('endDate').value);
@@ -1086,14 +1189,20 @@
                     const yearGain = yearEndValue - yearStartValue;
                     const totalGain = yearEndValue - totalInvested;
                     
+                    // Calcular impuestos sobre la ganancia total acumulada
+                    const totalTax = calculateSpanishTax(totalGain);
+                    const netValue = yearEndValue - totalTax;
+                    
                     // Calcular valor real ajustado por inflación
                     const inflationFactor = Math.pow(1 + inflationRate, yearsFromStart);
-                    const realValue = yearEndValue / inflationFactor;
+                    const realValue = netValue / inflationFactor;
                     
                     results.push({
                         year: currentYear,
                         yearlyInvestment: yearlyInvestment,
                         totalValue: yearEndValue,
+                        totalTax: totalTax,
+                        netValue: netValue,
                         realValue: realValue,
                         yearGain: yearGain,
                         totalGain: totalGain
@@ -1118,31 +1227,36 @@
             }
 
             // Añadir el último año
-            const finalInflationFactor = Math.pow(1 + inflationRate, years);
-            const finalRealValue = totalValue / finalInflationFactor;
             const finalGain = totalValue - totalInvested;
+            const finalTax = calculateSpanishTax(finalGain);
+            const finalNetValue = totalValue - finalTax;
+            const finalInflationFactor = Math.pow(1 + inflationRate, years);
+            const finalRealValue = finalNetValue / finalInflationFactor;
             
             results.push({
                 year: currentYear,
                 yearlyInvestment: yearlyInvestment,
                 totalValue: totalValue,
+                totalTax: finalTax,
+                netValue: finalNetValue,
                 realValue: finalRealValue,
                 yearGain: totalValue - (results[results.length - 1]?.totalValue || yearStartValue),
                 totalGain: finalGain
             });
 
-            const effectiveReturn = totalInvested > 0 ? ((totalValue / totalInvested) - 1) * 100 : 0;
+            const effectiveReturn = totalInvested > 0 ? ((finalNetValue / totalInvested) - 1) * 100 : 0;
 
             // Mostrar resultados
-            displayResults(totalValue, totalInvested, finalGain, effectiveReturn, finalRealValue, results);
+            displayResults(totalValue, totalInvested, finalGain, finalTax, finalNetValue, effectiveReturn, finalRealValue, results);
         }
 
-        function displayResults(finalValue, totalInvested, netGain, effectiveReturn, realValue, yearlyResults) {
+        function displayResults(finalValue, totalInvested, grossGain, totalTax, netValue, effectiveReturn, realValue, yearlyResults) {
             // Actualizar tarjetas de resumen
             document.getElementById('finalValue').textContent = formatCurrency(finalValue);
             document.getElementById('totalInvested').textContent = formatCurrency(totalInvested);
-            document.getElementById('totalGains').textContent = formatCurrency(netGain);
-            document.getElementById('effectiveReturn').textContent = formatPercentage(effectiveReturn);
+            document.getElementById('totalGains').textContent = formatCurrency(grossGain);
+            document.getElementById('totalTaxes').textContent = formatCurrency(totalTax);
+            document.getElementById('netGains').textContent = formatCurrency(grossGain - totalTax);
             document.getElementById('realPurchasingPower').textContent = formatCurrency(realValue);
 
             // Actualizar tabla
@@ -1154,8 +1268,9 @@
                 row.insertCell(0).textContent = result.year;
                 row.insertCell(1).textContent = formatCurrency(result.yearlyInvestment);
                 row.insertCell(2).textContent = formatCurrency(result.totalValue);
-                row.insertCell(3).textContent = formatCurrency(result.realValue);
-                row.insertCell(4).textContent = formatCurrency(result.totalGain);
+                row.insertCell(3).textContent = formatCurrency(result.totalTax);
+                row.insertCell(4).textContent = formatCurrency(result.netValue);
+                row.insertCell(5).textContent = formatCurrency(result.realValue);
             });
 
             // Actualizar gráfico
@@ -1173,7 +1288,8 @@
             }
 
             const labels = data.map(d => d.year);
-            const nominalData = data.map(d => d.totalValue);
+            const grossData = data.map(d => d.totalValue);
+            const netData = data.map(d => d.netValue);
             const realData = data.map(d => d.realValue);
             let cumulativeInvested = 0;
             const investedData = data.map(d => {
@@ -1186,14 +1302,21 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Valor Nominal',
-                        data: nominalData,
+                        label: 'Valor Bruto',
+                        data: grossData,
                         borderColor: 'rgb(52, 199, 89)',
                         backgroundColor: 'rgba(52, 199, 89, 0.1)',
                         fill: false,
                         tension: 0.4
                     }, {
-                        label: 'Valor Real (sin inflación)',
+                        label: 'Valor Neto (después impuestos)',
+                        data: netData,
+                        borderColor: 'rgb(0, 122, 255)',
+                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        fill: false,
+                        tension: 0.4
+                    }, {
+                        label: 'Poder Adquisitivo Real',
                         data: realData,
                         borderColor: 'rgb(255, 149, 0)',
                         backgroundColor: 'rgba(255, 149, 0, 0.1)',
@@ -1203,8 +1326,8 @@
                     }, {
                         label: 'Total Invertido',
                         data: investedData,
-                        borderColor: 'rgb(0, 122, 255)',
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        borderColor: 'rgb(142, 142, 147)',
+                        backgroundColor: 'rgba(142, 142, 147, 0.1)',
                         fill: false,
                         tension: 0.4
                     }]
@@ -1215,7 +1338,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: `Evolución de la Inversión (Inflación: ${currentInflationRate}%)`
+                            text: `Evolución de la Inversión (Inflación: ${currentInflationRate}%, Impuestos: ${taxMode === 'none' ? 'No' : taxMode === 'real' ? 'Tramos IRPF' : currentTaxRate + '%'})`
                         },
                         legend: {
                             display: true,
