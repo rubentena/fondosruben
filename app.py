@@ -152,14 +152,38 @@ def calculate_bitcoin_cagr():
     except requests.exceptions.RequestException as e: return None, f"Error de red (Kraken OHLC): {e}"
     except Exception as e: return None, f"Error inesperado en cálculo de CAGR: {e}"
 
+# --- CAMBIO 1: Función de frases de Bogle corregida ---
 def get_bogle_quotes():
-    # Esta función es tan rápida que la paralelización/caché no es crítica, pero se incluye por consistencia.
-    if _cache.get('bogle_quotes'): return _cache['bogle_quotes'], None
-    try:
-        logging.info(f"Fetching Bogle quotes from: {BOGLE_QUOTES_URL}");response=requests.get(BOGLE_QUOTES_URL,headers=HEADERS,timeout=10);response.raise_for_status();soup=BeautifulSoup(response.text,'html.parser');quotes=[p.get_text(strip=True,separator=' ')for p in soup.select('div.thrv_tw_quote p')]
-        if quotes: _cache['bogle_quotes'] = quotes; return random.choice(quotes), None
-        return'No invierta, simplemente, posea acciones.', None
-    except Exception as e: return'El error más grande es no permanecer en el camino.', f'Error Bogle: {e}'
+    """
+    Obtiene una frase aleatoria de John Bogle.
+    Utiliza una caché interna para no descargar la lista de frases en cada petición,
+    pero siempre elige una frase al azar de la lista cacheada.
+    """
+    all_quotes = _cache.get('bogle_quotes_list')
+    if not all_quotes:
+        try:
+            logging.info(f"Cache de frases no encontrada. Descargando desde: {BOGLE_QUOTES_URL}")
+            response = requests.get(BOGLE_QUOTES_URL, headers=HEADERS, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+            # Extrae todas las frases y las limpia
+            all_quotes = [p.get_text(strip=True, separator=' ') for p in soup.select('div.thrv_tw_quote p')]
+            if all_quotes:
+                _cache['bogle_quotes_list'] = all_quotes # Guarda la lista completa en caché
+            else:
+                logging.warning("No se encontraron frases de Bogle en la página.")
+                all_quotes = []
+        except Exception as e:
+            logging.error(f"Error al descargar las frases de Bogle: {e}")
+            # En caso de error, devuelve una frase por defecto y el error
+            return 'El error más grande es no permanecer en el camino.', f'Error Bogle: {e}'
+
+    # Si tenemos una lista de frases (de la caché o recién descargada), elegimos una al azar
+    if all_quotes:
+        return random.choice(all_quotes), None
+    
+    # Si todo falla, devuelve una frase por defecto
+    return 'No invierta, simplemente, posea acciones.', None
 
 # --- Funciones de Lógica de la Aplicación (sin cambios) ---
 def parse_percentage_to_float(perc_str):
@@ -205,7 +229,11 @@ def get_all_instrument_data():
             futures['money_market_rate'] = executor.submit(get_cached_or_fetch, 'money_market_rate', scrape_ecb_rate_data, ECB_ESTR_URL, HEADERS)
             futures['indexa_rate'] = executor.submit(get_cached_or_fetch, 'indexa_rate', scrape_indexa_data, HEADERS)
             futures['bitcoin_cagr'] = executor.submit(get_cached_or_fetch, 'bitcoin_cagr', calculate_bitcoin_cagr)
-            futures['quote'] = executor.submit(get_cached_or_fetch, 'quote', get_bogle_quotes)
+            
+            # --- CAMBIO 2: Llamada a get_bogle_quotes sin la caché externa ---
+            # Se llama directamente para que se ejecute en cada petición y devuelva una frase nueva.
+            futures['quote'] = executor.submit(get_bogle_quotes)
+
 
         # Recopilamos los resultados. El .result() espera a que la tarea termine.
         results = {key: future.result() for key, future in futures.items()}
