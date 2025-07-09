@@ -2,7 +2,7 @@ from flask import Flask,jsonify
 from flask_cors import CORS
 import requests
 from bs4 import BeautifulSoup
-import logging,traceback
+import logging,traceback,json,urllib.parse
 from datetime import datetime,date
 import pytz,re,random
 
@@ -30,15 +30,12 @@ INSTRUMENTS_DATA={
     'sp500_futures':{'display_name':'S&P 500 $ FUTURO','url':'https://es.investing.com/indices/us-spx-500-futures?cid=1175153','comment':'Por si queréis ver como se prevé que abra la sesión próxima del SP500. Funciona en tiempo real de forma diaria, solo es útil cuándo el mercado está cerrado (por la mañana para nosotros) y está en dolares. Sirve para haceros una idea de, viendo esta cotización y la del $/€, saber si abrirá plano, verde/rojo tímido, o positivo/negativo.','selector':DEFAULT_SELECTOR},
     'world_net_eur':{'display_name':'MUNDO NETO EN EUROS','url':'https://es.investing.com/indices/msci-world-net-eur','comment':'Por si queréis ver como va el World (Mundo) en comparación con el SP500, ya esta neteado también en €, esto es lo que gano yo básicamente con mi principal fondo.','selector':DEFAULT_SELECTOR},
     'usd_eur':{'display_name':'USD/EUR','url':'https://es.investing.com/currencies/usd-eur','comment':'Cotización del par $/€, BÁSICAMENTE: SI ESTÁ EN VERDE, OS BENEFICIA, SI ESTÁ EN ROJO, OS PERJUDICA.','selector':DEFAULT_SELECTOR},
-    # --- MODIFICACIÓN: INICIO ---
-    # Se cambia la fuente a la API pública de Kraken, que es estable y no requiere scraping.
     'bitcoin_eur':{
         'display_name':'BITCOIN',
         'comment':'Cotización del Bitcoin en euros. Mercado activo 24/7. Fuente: Kraken API.',
-        'api_source': 'kraken', # Indicador para usar la nueva función
+        'api_source': 'kraken',
         'api_pair': 'BTCEUR'
     }
-    # --- MODIFICACIÓN: FIN ---
 }
 
 HEADERS_MORNINGSTAR_API={'accept':'*/*','accept-language':'es-ES,es;q=0.8','apikey':'lstzFDEOhfFNMLikKa0am9mgEKLBl49T','origin':'https://global.morningstar.com','referer':'https://global.morningstar.com/','sec-ch-ua':'"Not)A;Brand";v="8", "Chromium";v="138", "Brave";v="138"','sec-ch-ua-mobile':'?0','sec-ch-ua-platform':'"Windows"','sec-fetch-dest':'empty','sec-fetch-mode':'cors','sec-fetch-site':'same-site','user-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36'}
@@ -101,8 +98,6 @@ def scrape_instrument_data(instrument_url,css_selector):
 		else:return None,'Elemento no encontrado'
 	except Exception as e:return None,f"Error de red: {str(e)}"
 
-# --- MODIFICACIÓN: INICIO ---
-# Nueva función para obtener datos de criptomonedas directamente desde la API pública de Kraken.
 def scrape_crypto_data_from_kraken(pair):
     url = f"https://api.kraken.com/0/public/Ticker?pair={pair}"
     try:
@@ -114,7 +109,6 @@ def scrape_crypto_data_from_kraken(pair):
         if data.get('error'):
             return None, f"Error de API Kraken: {data['error']}"
 
-        # Kraken devuelve un diccionario con una clave interna para el par. La obtenemos dinámicamente.
         result_key = list(data['result'].keys())[0]
         ticker_data = data['result'][result_key]
         
@@ -126,13 +120,11 @@ def scrape_crypto_data_from_kraken(pair):
 
         percentage_change = ((last_price / opening_price) - 1) * 100
         
-        # Formatear el string para que sea idéntico al del resto de instrumentos
         formatted_change = f"{percentage_change:+.2f}".replace('.', ',')
         return f"({formatted_change}%)", None
 
     except Exception as e:
         return None, f"Error procesando Kraken API: {str(e)}"
-# --- MODIFICACIÓN: FIN ---
 
 def scrape_tradingview_ytd_data(url,headers):
 	try:
@@ -159,6 +151,59 @@ def scrape_indexa_data(headers):
 		return None,"Dato 'TOTAL' no encontrado (v2)"
 	except Exception as e:return None,'No se pudo procesar la página'
 
+def calculate_bitcoin_cagr():
+    try:
+        logging.info("Calculating Bitcoin CAGR from Kraken historical data")
+        # Usamos datos semanales (interval=10080) para obtener un rango de tiempo más largo
+        url = "https://api.kraken.com/0/public/OHLC?pair=BTCEUR&interval=10080"
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+
+        if data.get('error') and len(data.get('error')) > 0:
+            return None, f"Error de API Kraken (OHLC): {data['error']}"
+
+        result_key = list(data['result'].keys())[0]
+        ohlc_data = data['result'][result_key]
+
+        if not ohlc_data or len(ohlc_data) < 2:
+            return None, "No hay suficientes datos históricos de Kraken"
+
+        # Primer punto de datos
+        start_point = ohlc_data[0]
+        start_timestamp = start_point[0]
+        start_price = float(start_point[4])  # Precio de cierre
+
+        # Último punto de datos
+        end_point = ohlc_data[-1]
+        end_timestamp = end_point[0]
+        end_price = float(end_point[4])  # Precio de cierre
+
+        if start_price == 0:
+            return None, "El precio inicial es cero, no se puede calcular CAGR"
+
+        # Calcular el número de años
+        num_seconds = end_timestamp - start_timestamp
+        num_years = num_seconds / (365.25 * 24 * 60 * 60)
+
+        if num_years < 1: # No calcular si el periodo es menor a un año
+            return "N/A (periodo < 1 año)", None
+
+        # Fórmula de la Tasa de Crecimiento Anual Compuesto (CAGR)
+        cagr = ((end_price / start_price) ** (1 / num_years)) - 1
+        cagr_percentage = cagr * 100
+
+        # Formatear el resultado
+        formatted_cagr = f"{cagr_percentage:,.2f} %".replace(",", "X").replace(".", ",").replace("X", ".")
+        return formatted_cagr, None
+
+    except requests.exceptions.RequestException as e:
+        return None, f"Error de red (Kraken OHLC): {e}"
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
+        return None, f"Error procesando datos de Kraken OHLC: {e}"
+    except Exception as e:
+        return None, f"Error inesperado en cálculo de CAGR: {e}"
+
 def get_bogle_quotes():
 	global bogle_quotes_cache
 	if bogle_quotes_cache:return random.choice(bogle_quotes_cache)
@@ -173,8 +218,6 @@ def get_all_instrument_data():
 	try:
 		instrument_values_temp={};current_spain_time=get_current_spain_time()
 		
-        # --- MODIFICACIÓN: INICIO ---
-        # Bucle modificado para usar la función correcta para cada tipo de fuente.
 		for(key,info)in INSTRUMENTS_DATA.items():
 			if info.get('api_source') == 'kraken':
 				perc_str, error = scrape_crypto_data_from_kraken(info['api_pair'])
@@ -182,7 +225,6 @@ def get_all_instrument_data():
 				perc_str,error=scrape_instrument_data(info['url'],info['selector'])
 			
 			instrument_values_temp[key]={'percentage_str':perc_str,'percentage_float':parse_percentage_to_float(perc_str),'error':error,'market_status':get_market_status(key,current_spain_time)}
-		# --- MODIFICACIÓN: FIN ---
 
 		current_hour_spain=current_spain_time.hour;sp500_comment_text,sp500_comment_sentiment='','neutral'
 		if 8<=current_hour_spain<15:
@@ -206,5 +248,38 @@ def get_all_instrument_data():
 			else:world_comment_text,world_comment_sentiment='MSCI World (en €): Se mantiene estable.','neutral'
 		final_instrument_data={}
 		for(key,info)in INSTRUMENTS_DATA.items():data_dict=instrument_values_temp[key];final_instrument_data[key]={'display_name':info['display_name'],'comment':info['comment'],'percentage_change':data_dict['percentage_str'],'error':data_dict['error'],'id_key':key,'market_status':data_dict['market_status']}
-		sp500_eur_ytd_str,sp500_eur_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_SP500_API_URL,HEADERS_MORNINGSTAR_API);sp500_usd_ytd_str,sp500_usd_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_SP500_USD_API_URL,HEADERS_MORNINGSTAR_API);world_ytd_str,world_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_WORLD_API_URL,HEADERS_MORNINGSTAR_API);world_hedged_ytd_str,world_hedged_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_WORLD_HEDGED_API_URL,HEADERS_MORNINGSTAR_API);sp500_inception_str,sp500_inception_error=scrape_inception_return_from_api(MORNINGSTAR_SP500_INCEPTION_API_URL,HEADERS_MORNINGSTAR_API);usdeur_ytd_str,usdeur_ytd_error=scrape_tradingview_ytd_data(TRADINGVIEW_USDEUR_URL,HEADERS);money_market_rate_str,money_market_rate_error=scrape_ecb_rate_data(ECB_ESTR_URL,HEADERS);indexa_rate_str,indexa_rate_error=scrape_indexa_data(HEADERS);greater_china_ytd_str,greater_china_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_GREATER_CHINA_API_URL,HEADERS_MORNINGSTAR_API);random_bogle_quote=get_bogle_quotes();return jsonify({'data_fetched_at':datetime.now(pytz.utc).isoformat(),'instruments':final_instrument_data,'page_commentaries':{'sp500_insight':{'text':sp500_comment_text,'sentiment':sp500_comment_sentiment},'world_insight':{'text':world_comment_text,'sentiment':world_comment_sentiment}},'page_data':{'sp500_ytd':{'performance_str':sp500_eur_ytd_str,'error':sp500_eur_ytd_error},'sp500_usd_ytd':{'performance_str':sp500_usd_ytd_str,'error':sp500_usd_ytd_error},'world_ytd':{'performance_str':world_ytd_str,'error':world_ytd_error},'world_hedged_ytd':{'performance_str':world_hedged_ytd_str,'error':world_hedged_ytd_error},'usdeur_ytd':{'performance_str':usdeur_ytd_str,'error':usdeur_ytd_error},'sp500_10y_annualized':{'performance_str':sp500_inception_str,'error':sp500_inception_error},'money_market_rate':{'performance_str':money_market_rate_str,'error':money_market_rate_error},'indexa_rate':{'performance_str':indexa_rate_str,'error':indexa_rate_error},'greater_china_ytd':{'performance_str':greater_china_ytd_str,'error':greater_china_ytd_error}},'quote':random_bogle_quote})
-	except Exception as e:logging.error(f"Error fatal en la ruta /all_instrument_data: {e}\n{traceback.format_exc()}");return jsonify({'error':'Ocurrió un error interno en el servidor.'}),500
+		
+		# --- Obtención de datos para la sección de rentabilidades ---
+		sp500_eur_ytd_str,sp500_eur_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_SP500_API_URL,HEADERS_MORNINGSTAR_API)
+		sp500_usd_ytd_str,sp500_usd_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_SP500_USD_API_URL,HEADERS_MORNINGSTAR_API)
+		world_ytd_str,world_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_WORLD_API_URL,HEADERS_MORNINGSTAR_API)
+		world_hedged_ytd_str,world_hedged_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_WORLD_HEDGED_API_URL,HEADERS_MORNINGSTAR_API)
+		sp500_inception_str,sp500_inception_error=scrape_inception_return_from_api(MORNINGSTAR_SP500_INCEPTION_API_URL,HEADERS_MORNINGSTAR_API)
+		usdeur_ytd_str,usdeur_ytd_error=scrape_tradingview_ytd_data(TRADINGVIEW_USDEUR_URL,HEADERS)
+		money_market_rate_str,money_market_rate_error=scrape_ecb_rate_data(ECB_ESTR_URL,HEADERS)
+		indexa_rate_str,indexa_rate_error=scrape_indexa_data(HEADERS)
+		greater_china_ytd_str,greater_china_ytd_error=scrape_ytd_from_morningstar_api(MORNINGSTAR_GREATER_CHINA_API_URL,HEADERS_MORNINGSTAR_API)
+		bitcoin_cagr_str,bitcoin_cagr_error=calculate_bitcoin_cagr() # <- AÑADIDO: Llamada a la nueva función
+		random_bogle_quote=get_bogle_quotes()
+
+		return jsonify({
+			'data_fetched_at':datetime.now(pytz.utc).isoformat(),
+			'instruments':final_instrument_data,
+			'page_commentaries':{'sp500_insight':{'text':sp500_comment_text,'sentiment':sp500_comment_sentiment},'world_insight':{'text':world_comment_text,'sentiment':world_comment_sentiment}},
+			'page_data':{
+				'sp500_ytd':{'performance_str':sp500_eur_ytd_str,'error':sp500_eur_ytd_error},
+				'sp500_usd_ytd':{'performance_str':sp500_usd_ytd_str,'error':sp500_usd_ytd_error},
+				'world_ytd':{'performance_str':world_ytd_str,'error':world_ytd_error},
+				'world_hedged_ytd':{'performance_str':world_hedged_ytd_str,'error':world_hedged_ytd_error},
+				'usdeur_ytd':{'performance_str':usdeur_ytd_str,'error':usdeur_ytd_error},
+				'sp500_10y_annualized':{'performance_str':sp500_inception_str,'error':sp500_inception_error},
+				'money_market_rate':{'performance_str':money_market_rate_str,'error':money_market_rate_error},
+				'indexa_rate':{'performance_str':indexa_rate_str,'error':indexa_rate_error},
+				'greater_china_ytd':{'performance_str':greater_china_ytd_str,'error':greater_china_ytd_error},
+				'bitcoin_cagr':{'performance_str':bitcoin_cagr_str,'error':bitcoin_cagr_error} # <- AÑADIDO: Nuevo dato
+			},
+			'quote':random_bogle_quote
+		})
+	except Exception as e:
+		logging.error(f"Error fatal en la ruta /all_instrument_data: {e}\n{traceback.format_exc()}");
+		return jsonify({'error':'Ocurrió un error interno en el servidor.'}),500
